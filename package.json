@@ -10,13 +10,12 @@
   "author": "",
   "license": "ISC",
   "description": "",
-  "dependencies": {},
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240117.0",
     "@types/node": "^25.0.3",
     "dotenv": "^17.2.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "wrangler": "^3.19.0"
+    "wrangler": "^3.114.16"
   }
 }
