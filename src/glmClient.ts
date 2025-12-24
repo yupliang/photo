@@ -1,48 +1,56 @@
-import axios from "axios";
-import dotenv from "dotenv";
+export async function analyzeImageBase64(
+  imageBase64: string,
+  apiKey: string
+): Promise<string> {
+  if (!apiKey) {
+    throw new Error("Missing BIGMODEL_API_KEY");
+  }
 
-dotenv.config();
-
-const API_KEY = process.env.BIGMODEL_API_KEY;
-if (!API_KEY) {
-  throw new Error("Missing BIGMODEL_API_KEY");
-}
-
-export async function analyzeImageBase64(imageBase64: string): Promise<string> {
-  const res = await axios.post(
+  const res = await fetch(
     "https://open.bigmodel.cn/api/paas/v4/chat/completions",
     {
-      model: "glm-4v",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "glm-4v",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `
 你是一名友好、不会打击人的摄影教练。
 请从构图、光线、主体明确度三个方面，
 分析这张照片的优缺点，并给出下次拍摄建议。
-              `.trim()
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${imageBase64}`
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json"
-      }
+                `.trim(),
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${imageBase64}`,
+                },
+              },
+            ],
+          },
+        ],
+      }),
     }
   );
 
-  return res.data.choices[0].message.content;
-}
+  if (!res.ok) {
+    throw new Error(`API request failed: ${res.statusText}`);
+  }
 
+  const data = await res.json() as {
+    choices: Array<{
+      message: {
+        content: string;
+      };
+    }>;
+  };
+  return data.choices[0].message.content;
+}
