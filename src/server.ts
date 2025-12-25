@@ -84,7 +84,7 @@ export default {
   },
 };
 
-async function handleAnalyze(request: Request, env: Env, requestId: string): Promise<Response> {
+export async function handleAnalyze(request: Request, env: Env, requestId: string): Promise<Response> {
   try {
     console.log(`[${requestId}] [handleAnalyze] 开始处理分析请求`);
     
@@ -182,7 +182,7 @@ async function handleAnalyze(request: Request, env: Env, requestId: string): Pro
   }
 }
 
-function getIndexHTML(): string {
+export function getIndexHTML(): string {
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -733,6 +733,6 @@ function getIndexHTML(): string {
 }
 
 // 类型定义
-interface Env {
+export interface Env {
   BIGMODEL_API_KEY: string;
 }

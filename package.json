@@ -4,7 +4,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "start:node": "ts-node src/node-server.ts",
+    "start:node:prod": "node -r ts-node/register src/node-server.ts"
   },
   "keywords": [],
   "author": "",
