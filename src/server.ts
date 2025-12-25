@@ -1,32 +1,96 @@
 import { analyzeImageBase64 } from "./glmClient";
 
+// 预生成 HTML，避免每次请求都重新生成
+// 使用 try-catch 确保模块加载时不会因为 HTML 生成失败而导致 Worker 无法启动
+let INDEX_HTML: string;
+try {
+  INDEX_HTML = getIndexHTML();
+  console.log("[Worker 初始化] HTML 预生成成功");
+} catch (error) {
+  console.error("[Worker 初始化] HTML 预生成失败:", error);
+  INDEX_HTML = "<!DOCTYPE html><html><body><h1>服务器初始化错误</h1></body></html>";
+}
+
 // Cloudflare Worker 入口
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    // 详细的请求日志
     const url = new URL(request.url);
+    const startTime = Date.now();
+    const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const method = request.method;
+    const pathname = url.pathname;
+    
+    console.log(`[${requestId}] ===== 请求开始 =====`);
+    console.log(`[${requestId}] 时间: ${new Date().toISOString()}`);
+    console.log(`[${requestId}] 方法: ${method}`);
+    console.log(`[${requestId}] URL: ${url.href}`);
+    console.log(`[${requestId}] 路径: ${pathname}`);
+    console.log(`[${requestId}] 查询参数: ${url.search}`);
 
-    // 处理静态文件（index.html）
-    if (url.pathname === "/" || url.pathname === "/index.html") {
-      return new Response(getIndexHTML(), {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
+    try {
+      // 1️⃣ 处理 GET / - 返回 HTML 页面
+      if (method === "GET" && (pathname === "/" || pathname === "/index.html")) {
+        console.log(`[${requestId}] ✓ 进入 HTML 页面分支 (GET /)`);
+        console.log(`[${requestId}] 返回预生成的 HTML，长度: ${INDEX_HTML.length} 字符`);
+        
+        // 直接返回预生成的 HTML，不执行任何计算
+        const response = new Response(INDEX_HTML, {
+          headers: { 
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=3600"
+          },
+        });
+        
+        console.log(`[${requestId}] ✓ HTML 响应已创建`);
+        return response;
+      }
+
+      // 2️⃣ 处理 POST /analyze - 只处理图片分析
+      if (method === "POST" && pathname === "/analyze") {
+        console.log(`[${requestId}] ✓ 进入图片分析 API 分支 (POST /analyze)`);
+        const result = await handleAnalyze(request, env, requestId);
+        console.log(`[${requestId}] ✓ 分析请求处理完成`);
+        return result;
+      }
+
+      // 3️⃣ 其他所有请求返回 404 Not Found
+      console.log(`[${requestId}] ✗ 路由未匹配 (${method} ${pathname})，返回 404`);
+      return new Response("Not Found", { 
+        status: 404,
+        headers: { "Content-Type": "text/plain" }
       });
+    } catch (error) {
+      console.error(`[${requestId}] ✗✗✗ 请求处理异常 ✗✗✗`);
+      console.error(`[${requestId}] 错误类型:`, error instanceof Error ? error.constructor.name : typeof error);
+      console.error(`[${requestId}] 错误消息:`, error instanceof Error ? error.message : String(error));
+      console.error(`[${requestId}] 错误堆栈:`, error instanceof Error ? error.stack : "无堆栈信息");
+      
+      const errorMessage = error instanceof Error ? error.message : "内部服务器错误";
+      return new Response(
+        JSON.stringify({ 
+          error: errorMessage,
+          requestId: requestId
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    } finally {
+      const duration = Date.now() - startTime;
+      console.log(`[${requestId}] ===== 请求结束，耗时: ${duration}ms =====`);
     }
-
-    // 处理图片分析接口
-    if (url.pathname === "/analyze" && request.method === "POST") {
-      return handleAnalyze(request, env);
-    }
-
-    // 404
-    return new Response("Not Found", { status: 404 });
   },
 };
 
-async function handleAnalyze(request: Request, env: Env): Promise<Response> {
+async function handleAnalyze(request: Request, env: Env, requestId: string): Promise<Response> {
   try {
+    console.log(`[${requestId}] [handleAnalyze] 开始处理分析请求`);
+    
     // 检查环境变量
     if (!env.BIGMODEL_API_KEY) {
-      console.error("BIGMODEL_API_KEY 未设置");
+      console.error(`[${requestId}] [handleAnalyze] BIGMODEL_API_KEY 未设置`);
       return new Response(
         JSON.stringify({ 
           error: "服务器配置错误：API Key 未设置。请使用 'wrangler secret put BIGMODEL_API_KEY' 设置环境变量。" 
@@ -37,11 +101,17 @@ async function handleAnalyze(request: Request, env: Env): Promise<Response> {
         }
       );
     }
+    console.log(`[${requestId}] [handleAnalyze] API Key 已配置（长度: ${env.BIGMODEL_API_KEY.length}）`);
 
+    console.log(`[${requestId}] [handleAnalyze] 开始解析 FormData`);
     const formData = await request.formData();
+    console.log(`[${requestId}] [handleAnalyze] FormData 解析完成`);
+    
     const fileEntry = formData.get("photo");
+    console.log(`[${requestId}] [handleAnalyze] 获取文件字段: ${fileEntry ? (typeof fileEntry === "string" ? "字符串类型" : "File 类型") : "未找到"}`);
 
     if (!fileEntry || typeof fileEntry === "string") {
+      console.log(`[${requestId}] [handleAnalyze] 未找到有效的图片文件`);
       return new Response(
         JSON.stringify({ error: "请上传图片" }),
         {
@@ -52,21 +122,41 @@ async function handleAnalyze(request: Request, env: Env): Promise<Response> {
     }
 
     const file = fileEntry as File;
+    console.log(`[${requestId}] [handleAnalyze] 图片文件信息:`);
+    console.log(`[${requestId}]   - 文件名: ${file.name}`);
+    console.log(`[${requestId}]   - 文件大小: ${file.size} bytes`);
+    console.log(`[${requestId}]   - 文件类型: ${file.type}`);
 
     // 读取文件并转换为 base64
+    console.log(`[${requestId}] [handleAnalyze] 开始读取文件内容`);
     const arrayBuffer = await file.arrayBuffer();
+    console.log(`[${requestId}] [handleAnalyze] 文件读取完成，ArrayBuffer 长度: ${arrayBuffer.byteLength}`);
+    
     // 将 ArrayBuffer 转换为 base64（分块处理避免调用栈溢出）
+    console.log(`[${requestId}] [handleAnalyze] 开始转换为 base64`);
     const bytes = new Uint8Array(arrayBuffer);
     let binary = '';
     const chunkSize = 8192; // 每次处理 8KB
+    const totalChunks = Math.ceil(bytes.length / chunkSize);
+    console.log(`[${requestId}] [handleAnalyze] 需要处理 ${totalChunks} 个块`);
+    
     for (let i = 0; i < bytes.length; i += chunkSize) {
       const chunk = bytes.subarray(i, i + chunkSize);
       binary += String.fromCharCode.apply(null, Array.from(chunk));
+      if ((i / chunkSize) % 10 === 0) {
+        console.log(`[${requestId}] [handleAnalyze] 转换进度: ${Math.round((i / bytes.length) * 100)}%`);
+      }
     }
     const imageBase64 = btoa(binary);
+    console.log(`[${requestId}] [handleAnalyze] Base64 转换完成，长度: ${imageBase64.length} 字符`);
 
     // 调用 GLM-4V 分析（传入 env 以获取 API Key）
+    console.log(`[${requestId}] [handleAnalyze] 开始调用 GLM-4V API`);
+    const apiStartTime = Date.now();
     const result = await analyzeImageBase64(imageBase64, env.BIGMODEL_API_KEY);
+    const apiDuration = Date.now() - apiStartTime;
+    console.log(`[${requestId}] [handleAnalyze] GLM-4V API 调用完成，耗时: ${apiDuration}ms`);
+    console.log(`[${requestId}] [handleAnalyze] 分析结果长度: ${result.length} 字符`);
 
     return new Response(
       JSON.stringify({ result }),
@@ -75,7 +165,11 @@ async function handleAnalyze(request: Request, env: Env): Promise<Response> {
       }
     );
   } catch (error) {
-    console.error("分析失败:", error);
+    console.error(`[${requestId}] [handleAnalyze] ✗✗✗ 分析失败 ✗✗✗`);
+    console.error(`[${requestId}] [handleAnalyze] 错误类型:`, error instanceof Error ? error.constructor.name : typeof error);
+    console.error(`[${requestId}] [handleAnalyze] 错误消息:`, error instanceof Error ? error.message : String(error));
+    console.error(`[${requestId}] [handleAnalyze] 错误堆栈:`, error instanceof Error ? error.stack : "无堆栈信息");
+    
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "分析失败",
