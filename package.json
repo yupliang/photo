@@ -1,23 +1,23 @@
 {
   "name": "photo",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "src/node-server.ts",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "start:node": "ts-node src/node-server.ts",
-    "start:node:prod": "node -r ts-node/register src/node-server.ts"
+    "dev": "ts-node src/node-server.ts",
+    "start": "ts-node src/node-server.ts",
+    "build": "tsc",
+    "start:prod": "node dist/node-server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
+  "dependencies": {
+    "dotenv": "^17.2.3"
+  },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240117.0",
     "@types/node": "^25.0.3",
-    "dotenv": "^17.2.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3",
-    "wrangler": "^3.114.16"
+    "typescript": "^5.9.3"
   }
 }

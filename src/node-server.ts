@@ -1,5 +1,9 @@
 import http from "http";
+import dotenv from "dotenv";
 import { getIndexHTML, handleAnalyze, type Env } from "./server";
+
+// 加载环境变量
+dotenv.config();
 
 // 预生成 HTML
 let INDEX_HTML: string;
@@ -108,10 +112,15 @@ const PORT = parseInt(process.env.PORT || "8787", 10);
 const HOST = "0.0.0.0"; // 监听所有网络接口，允许公网访问
 
 server.listen(PORT, HOST, () => {
-  console.log(`🚀 服务器已启动`);
+  console.log("=".repeat(60));
+  console.log("🚀 服务器已启动");
+  console.log("=".repeat(60));
   console.log(`📡 监听地址: ${HOST}:${PORT}`);
   console.log(`🌐 本地访问: http://localhost:${PORT}`);
-  console.log(`🌍 公网访问: http://<your-ecs-ip>:${PORT}`);
-  console.log(`📝 环境变量 BIGMODEL_API_KEY: ${env.BIGMODEL_API_KEY ? "已设置" : "未设置"}`);
+  console.log(`🌍 公网访问: http://<ECS公网IP>:${PORT}`);
+  console.log(`📝 环境变量 BIGMODEL_API_KEY: ${env.BIGMODEL_API_KEY ? "✅ 已设置" : "❌ 未设置"}`);
+  console.log("=".repeat(60));
+  console.log(`Server running on port ${PORT}`);
+  console.log("=".repeat(60));
 });
 
