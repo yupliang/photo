@@ -101,7 +101,7 @@ async function nodeRequestToWebRequest(req: any): Promise<Request> {
 
   return new Request(url.href, {
     method: req.method || "GET",
-    headers: req.headers as HeadersInit,
+    headers: req.headers as any,
     body: body.length > 0 ? body : undefined,
   });
 }
