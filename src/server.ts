@@ -1,4 +1,4 @@
-import { analyzeImageBase64 } from "./glmClient";
+const { analyzeImageBase64 } = require("./glmClient");
 
 // 预生成 HTML，避免每次请求都重新生成
 // 使用 try-catch 确保模块加载时不会因为 HTML 生成失败而导致 Worker 无法启动
@@ -736,3 +736,10 @@ export function getIndexHTML(): string {
 export interface Env {
   BIGMODEL_API_KEY: string;
 }
+
+// CommonJS 导出（用于 Node.js 环境）
+module.exports = {
+  getIndexHTML,
+  handleAnalyze,
+  Env: {} as Env, // 类型定义，实际运行时不需要
+};

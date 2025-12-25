@@ -1,4 +1,4 @@
-export async function analyzeImageBase64(
+async function analyzeImageBase64(
   imageBase64: string,
   apiKey: string
 ): Promise<string> {
@@ -54,3 +54,5 @@ export async function analyzeImageBase64(
   };
   return data.choices[0].message.content;
 }
+
+module.exports = { analyzeImageBase64 };

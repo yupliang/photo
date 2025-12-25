@@ -1,6 +1,6 @@
-import http from "http";
-import dotenv from "dotenv";
-import { getIndexHTML, handleAnalyze, type Env } from "./server";
+const http = require("http");
+const dotenv = require("dotenv");
+const { getIndexHTML, handleAnalyze } = require("./server");
 
 // 加载环境变量
 dotenv.config();
@@ -16,12 +16,12 @@ try {
 }
 
 // 从环境变量获取配置
-const env: Env = {
+const env = {
   BIGMODEL_API_KEY: process.env.BIGMODEL_API_KEY || "",
 };
 
 // 创建 HTTP 服务器
-const server = http.createServer(async (req, res) => {
+const server = http.createServer(async (req: any, res: any) => {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
   const startTime = Date.now();
   const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -87,7 +87,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 // 将 Node.js IncomingMessage 转换为 Web API Request
-async function nodeRequestToWebRequest(req: http.IncomingMessage): Promise<Request> {
+async function nodeRequestToWebRequest(req: any): Promise<Request> {
   const host = req.headers.host || "localhost";
   const protocol = req.headers["x-forwarded-proto"] || "http";
   const url = new URL(req.url || "/", `${protocol}://${host}`);

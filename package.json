@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "src/node-server.ts",
   "scripts": {
-    "dev": "node --loader ts-node/esm src/node-server.ts",
-    "start": "node --loader ts-node/esm src/node-server.ts",
+    "dev": "ts-node src/node-server.ts",
+    "start": "ts-node src/node-server.ts",
     "build": "tsc",
     "start:prod": "node dist/node-server.js"
   },
